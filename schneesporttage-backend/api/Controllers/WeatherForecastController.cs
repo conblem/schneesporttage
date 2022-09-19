@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 
 namespace api.Controllers;
@@ -12,6 +13,7 @@ public class WeatherForecastController : ControllerBase
     };
 
     private readonly ILogger<WeatherForecastController> _logger;
+    private readonly ActivitySource MyActivitySource = new ("MyCompany.MyProduct.MyService");
 
     public WeatherForecastController(ILogger<WeatherForecastController> logger)
     {
@@ -21,6 +23,11 @@ public class WeatherForecastController : ControllerBase
     [HttpGet(Name = "GetWeatherForecast")]
     public IEnumerable<WeatherForecast> Get()
     {
+        using var activity = MyActivitySource.StartActivity("SayHello");
+        activity?.SetTag("foo", 1);
+        activity?.SetTag("bar", "Hello, World!");
+        activity?.SetTag("baz", new[] { 1, 2, 3 });
+
         return Enumerable.Range(1, 5).Select(index => new WeatherForecast
         {
             Date = DateTime.Now.AddDays(index),

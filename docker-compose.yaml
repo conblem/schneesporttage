@@ -8,6 +8,8 @@ services:
     image: schneesporttage/api
     build:
       context: ./schneesporttage-backend/api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Docker
     depends_on:
       - db
       - jaeger

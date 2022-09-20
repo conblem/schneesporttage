@@ -4,9 +4,9 @@ using OpenTelemetry.Trace;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Define some important constants to initialize tracing with
-var serviceName = "MyCompany.MyProduct.MyService";
-var serviceVersion = "1.0.0";
+var oltp = builder.Configuration.GetSection("Oltp");
+var serviceName = oltp["Service"];
+var oltpEndpoint = oltp["Endpoint"];
 
 // Configure important OpenTelemetry settings, the console exporter, and instrumentation library
 builder.Services.AddOpenTelemetryTracing(tracerProviderBuilder =>
@@ -14,12 +14,12 @@ builder.Services.AddOpenTelemetryTracing(tracerProviderBuilder =>
     tracerProviderBuilder
         .AddOtlpExporter(opt =>
         {
+            opt.Endpoint = new Uri(oltpEndpoint);
             opt.Protocol = OtlpExportProtocol.HttpProtobuf;
         })
-        .AddSource(serviceName)
-        .SetResourceBuilder(
-            ResourceBuilder.CreateDefault()
-                .AddService(serviceName: serviceName, serviceVersion: serviceVersion))
+        .AddSource(oltp["Service"])
+        .AddProcessor()
+        .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(serviceName))
         .AddHttpClientInstrumentation()
         .AddAspNetCoreInstrumentation()
         .AddSqlClientInstrumentation();
@@ -35,7 +35,8 @@ builder.Services.AddSwaggerGen();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+// Docker is also for local development
+if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Docker"))
 {
     app.UseSwagger();
     app.UseSwaggerUI();

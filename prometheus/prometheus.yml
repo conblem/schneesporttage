@@ -1,0 +1,35 @@
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: prometheus
+    metrics_path: /prometheus/metrics
+    static_configs:
+      - targets: ["localhost:9090"]
+  - job_name: cloudflared
+    dns_sd_configs:
+      - names:
+          - cloudflared
+        type: A
+        port: 8080
+  - job_name: jaeger
+    dns_sd_configs:
+      - names:
+          - jaeger
+        type: A
+        port: 14269
+  - job_name: postgres
+    dns_sd_configs:
+      - names:
+          - postgres-exporter
+        type: A
+        port: 9187
+  - job_name: api
+    dns_sd_configs:
+      - names:
+          - host.docker.internal
+        type: A
+        port: 7268
+    scheme: https
+    tls_config:
+      insecure_skip_verify: true

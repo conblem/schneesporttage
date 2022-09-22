@@ -1,0 +1,6 @@
+tunnel: 871fdc57-372e-4899-87ba-1b5f8788dc7f
+
+metrics: "cloudflared:8080"
+
+ingress:
+  - service: http://traefik:80

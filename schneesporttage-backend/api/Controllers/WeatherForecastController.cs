@@ -13,21 +13,20 @@ public class WeatherForecastController : ControllerBase
     };
 
     private readonly ILogger<WeatherForecastController> _logger;
-    private readonly ActivitySource MyActivitySource = new ("MyCompany.MyProduct.MyService");
+    private readonly ActivitySource _activitySource;
 
-    public WeatherForecastController(ILogger<WeatherForecastController> logger)
+    public WeatherForecastController(ILogger<WeatherForecastController> logger, ActivitySource activitySource)
     {
         _logger = logger;
+        _activitySource = activitySource;
     }
 
     [HttpGet(Name = "GetWeatherForecast")]
     public IEnumerable<WeatherForecast> Get()
     {
-        using var activity = MyActivitySource.StartActivity("SayHello");
-        activity?.SetTag("foo", 1);
-        activity?.SetTag("bar", "Hello, World!");
-        activity?.SetTag("baz", new[] { 1, 2, 3 });
-
+        using var activity = _activitySource.StartActivity();
+        activity?.SetTag("tag", "value");
+        
         return Enumerable.Range(1, 5).Select(index => new WeatherForecast
         {
             Date = DateTime.Now.AddDays(index),

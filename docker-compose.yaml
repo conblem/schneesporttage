@@ -4,6 +4,21 @@ volumes:
   schneesporttage-postgres: {}
 
 services:
+  traefik:
+    image: traefik:v2.8.5
+    command:
+      - --api.insecure=true
+      - --providers.docker
+      - --providers.file.filename=/config/traefik.yml
+      - --log.level=DEBUG
+      - --accesslog
+      - --providers.docker.exposedByDefault=false
+      - --entrypoints.web.address=:80
+    ports:
+      - 8081:8080
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/traefik.yml:/config/traefik.yml:ro
   api:
     image: schneesporttage/api
     build:
@@ -11,14 +26,27 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Docker
     depends_on:
-      - db
+      - postgres
       - jaeger
-  db:
+  cloudflared:
+    image: schneesporttage/cloudflared
+    build:
+      context: ./cloudflared
+    command: ["tunnel","run", "--token", "$DEVELOPMENT_API_TOKEN", "development-api"]
+    volumes:
+      - ./cloudflared/config.yaml:/etc/cloudflared/config.yaml:ro
+    environment:
+      - DEVELOPMENT_API_TOKEN=${DEVELOPMENT_API_TOKEN}
+  postgres:
     image: postgres
     environment:
       POSTGRES_PASSWORD: example
     volumes:
       - schneesporttage-postgres:/var/lib/postgresql/data
+  postgres-exporter:
+    image: quay.io/prometheuscommunity/postgres-exporter
+    environment:
+      - DATA_SOURCE_NAME=postgresql://postgres:example@postgres:5432/postgres?sslmode=disable
   jaeger:
     image: jaegertracing/all-in-one:1.38
     environment:
@@ -35,3 +63,30 @@ services:
       - 14268:14268
       - 14269:14269
       - 9411:9411
+  prometheus:
+    image: prom/prometheus
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prometheus.rule=Host(`obs.schneesporttage.ml`) && PathPrefix(`/prometheus`)"
+    command: 
+      - --web.external-url=/prometheus
+      - --config.file=/etc/prometheus/prometheus.yml
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - 9090:9090
+  grafana:
+    image: grafana/grafana-oss:9.0.9
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=Host(`obs.schneesporttage.ml`) && PathPrefix(`/grafana`)"
+    environment:
+      - JWKS=${JWKS}
+    ports:
+      - 3000:3000
+    volumes:
+      - ./grafana/grafana.ini:/etc/grafana/grafana.ini:ro
+      - ./grafana/dashboard.yaml:/etc/grafana/provisioning/dashboards/dashboard.yaml:ro
+      - ./grafana/datasource.yaml:/etc/grafana/provisioning/datasources/datasource.yaml:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro

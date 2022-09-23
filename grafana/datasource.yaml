@@ -3,5 +3,10 @@ apiVersion: 1
 datasources:
   - name: Prometheus
     type: prometheus
-    uid: IX8gyB74z
+    uid: prometheus
     url: http://prometheus:9090
+    isDefault: true
+  - name: jaeger
+    type: jaeger
+    uid: jaeger
+    url: http://jaeger:16686

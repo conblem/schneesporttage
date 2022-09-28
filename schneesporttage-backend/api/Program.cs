@@ -1,5 +1,7 @@
 using System.Diagnostics;
-using OpenTelemetry.Exporter;
+using api;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Prometheus;
@@ -16,13 +18,12 @@ builder.Services.AddOpenTelemetryTracing(tracingBuilder =>
         .AddOtlpExporter(opt =>
         {
             opt.Endpoint = new Uri(oltpEndpoint);
-            opt.Protocol = OtlpExportProtocol.Grpc;
         })
-        .AddSource(oltp["Service"])
         .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(serviceName))
+        .AddSource(serviceName)
         .AddHttpClientInstrumentation()
         .AddAspNetCoreInstrumentation()
-        .AddSqlClientInstrumentation()
+        .AddNpgsql()
 );
 
 // Add services to the container.
@@ -32,7 +33,11 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-builder.Services.AddSingleton(() => new ActivitySource(serviceName));
+builder.Services.AddDbContext<SchneesporttageContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DB"))
+);
+
+builder.Services.AddRepos();
 
 var app = builder.Build();
 
